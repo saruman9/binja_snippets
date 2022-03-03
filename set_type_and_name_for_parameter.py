@@ -18,9 +18,6 @@ if typing.TYPE_CHECKING:
 
 
 def change_type_name(operand: HighLevelILInstruction, ty, ty_name):
-    binaryninja.log_info(
-        f"%s %s -> %s %s" % (operand.var.type, operand.var.name, ty, ty_name)
-    )
     operand.var.set_name_and_type_async(ty_name, ty)
     pass
 
@@ -46,17 +43,17 @@ def process_hlil(hlil: HighLevelILInstruction, ty, ty_name, parameter_id):
             process_hlil(var_defs[0], ty, ty_name, parameter_id)
             return
         elif var in hlil_function.aliased_vars:
-            binaryninja.log_warn(f"Used aliased variable: 0x%x" % operand.address)
+            binaryninja.log_warn(f"Used aliased variable: {operand.address:#x}")
             return
     else:
-        binaryninja.log_error(operand)
+        binaryninja.log_error(f"{operand} ({operand.address:#x})")
 
 
 def process():
     target_function = bv.get_function_at(bv.get_callees(here)[0])
     parameters = list(target_function.parameter_vars)
     parameter_id = binaryninja.get_choice_input(
-        "Parameter", "parameters", [f"%s %s" % (p.type, p.name) for p in parameters]
+        "Parameter", "parameters", [f"{p.type} {p.name}" for p in parameters]
     )
     parameter = parameters[parameter_id]
     ty = parameter.type
@@ -72,7 +69,7 @@ def process():
                 reference_function.mlil_instructions, reference_mlil_index, None
             )
         ).hlil
-        binaryninja.log_info(f"0x%x" % ref.address)
+        binaryninja.log_info(f"{ref.address:#x}")
         process_hlil(reference_hlil, ty, ty_name, parameter_id)
 
 
