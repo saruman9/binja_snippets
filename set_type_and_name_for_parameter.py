@@ -58,9 +58,9 @@ def process():
     parameter = parameters[parameter_id]
     ty = parameter.type
     ty_name = parameter.name
-    referencese = bv.get_callers(target_function.start)
+    references = bv.get_callers(target_function.start)
 
-    for ref in referencese:
+    for ref in references:
         reference_function = bv.get_functions_containing(ref.address)[0]
         mlil = reference_function.mlil
         reference_mlil_index = mlil.get_instruction_start(ref.address)
