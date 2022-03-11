@@ -69,7 +69,6 @@ def process():
                 reference_function.mlil_instructions, reference_mlil_index, None
             )
         ).hlil
-        binaryninja.log_info(f"{ref.address:#x}")
         process_hlil(reference_hlil, ty, ty_name, parameter_id)
 
 
