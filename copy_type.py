@@ -6,7 +6,7 @@ import typing
 from binaryninja.highlevelil import HighLevelILFunction
 from binaryninja.types import QualifiedName
 from binaryninjaui import UIActionContext
-from binaryninja import MessageBoxIcon
+from binaryninja import MessageBoxIcon, MessageBoxButtonSet, MessageBoxButtonResult
 
 if typing.TYPE_CHECKING:
     import binaryninja
@@ -41,11 +41,17 @@ def process():
     new_view = views[tab_id][0]
 
     if new_view.get_type_by_name(name):
-        binaryninja.show_message_box(
-            "Type", f"Type {name!s} already defined.", icon=MessageBoxIcon.ErrorIcon
-        )
-        binaryninja.log_error(f"{current_view!s}")
-        exit()
+        if (
+            binaryninja.show_message_box(
+                "Type",
+                f"Type {name!s} already defined. Redefine?",
+                buttons=MessageBoxButtonSet.YesNoButtonSet,
+            )
+            == MessageBoxButtonResult.NoButton
+            or MessageBoxButtonResult.CancelButton
+        ):
+            exit()
+
     new_view.define_user_type(name, ty)
 
 
