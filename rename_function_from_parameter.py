@@ -1,81 +1,110 @@
 # Rename the function to name, getting from string from parameter
 #
-import itertools
 import typing
+from typing import Any
 
 from binaryninja.highlevelil import (
-    HighLevelILFunction,
     HighLevelILInstruction,
-    HighLevelILOperation,
+    HighLevelILCall,
+    HighLevelILTailcall,
+    HighLevelILConstPtr,
+    HighLevelILVarInit,
+    HighLevelILAssignUnpack,
+    HighLevelILVar,
+    HighLevelILAssign,
+    HighLevelILRet,
 )
-from binaryninja import Function
+from binaryninja.function import Function
+from binaryninja.interaction import get_choice_input
+from binaryninja.variable import Variable
+from binaryninja.log import log_warn, log_alert, log_debug
+from binaryninja.exceptions import ILException
 
 if typing.TYPE_CHECKING:
-    import binaryninja
+    from binaryninja import BinaryView
 
-    bv: binaryninja.BinaryView = None
+    bv: BinaryView | Any = None
     here: int = 0
-    current_hlil: HighLevelILFunction = None
+    current_function: Function | Any = None
 
 
-def parse_and_set_name(signature: str, function: Function):
-    signature = signature.removeprefix("virtual ")
-    signature = signature.removeprefix("static ")
-    signature = signature.removesuffix(" const")
-    signature = signature.replace("~", "__")
-    signature = signature.replace("operator=", "operator_equal")
-    signature = signature.replace("operator<", "operator_less")
-    signature = signature.replace("operator>", "operator_greater")
-    (signature, _, _) = signature.partition("(")
-    signature = signature + "()"
-    (_, _, signature) = signature.rpartition(" ")
-    signature = "void *" + signature
-    try:
-        ty, name = bv.parse_type_string(signature)
-        function.name = str(name)
-    except SyntaxError:
-        binaryninja.log_error(
-            f"Can't parse signature {signature} at {function.start:#x}"
-        )
-        return
-
-
-def process_hlil(hlil: HighLevelILInstruction, parameter_id):
-    if hlil.operation == HighLevelILOperation.HLIL_VAR_INIT:
-        process_hlil(hlil.operands[1], parameter_id)
-        return
-    elif hlil.operation == HighLevelILOperation.HLIL_ASSIGN_UNPACK:
-        process_hlil(hlil.operands[1], parameter_id)
-        return
-    elif hlil.operation == HighLevelILOperation.HLIL_CALL:
-        parameter = hlil.params[parameter_id]
-        signature = bv.get_string_at(parameter.value).value
-        function = hlil.function.source_function
-        function.comment = signature
-        parse_and_set_name(signature, function)
-    else:
-        binaryninja.log_error(f"{hlil} ({hlil.address:#x})")
-        return
-
-
-def process():
-    target_function = bv.get_function_at(bv.get_callees(here)[0])
-    parameters = list(target_function.parameter_vars)
-    parameter_id = binaryninja.get_choice_input(
-        "Parameter", "parameters", [f"{p.type} {p.name}" for p in parameters]
-    )
-    references = bv.get_callers(target_function.start)
-
-    for ref in itertools.islice(references, None):
-        reference_function = bv.get_functions_containing(ref.address)[0]
-        mlil = reference_function.mlil
-        reference_mlil_index = mlil.get_instruction_start(ref.address)
-        reference_hlil = next(
-            itertools.islice(
-                reference_function.mlil_instructions, reference_mlil_index, None
+def find_name(instruction: HighLevelILInstruction, index: int) -> str | Variable | None:
+    log_debug(f"inst: {instruction} ({type(instruction)}) at {instruction.address:#x}")
+    match instruction:
+        case HighLevelILCall() | HighLevelILTailcall():
+            param: HighLevelILInstruction = instruction.params[index]
+            log_debug(f"param: {param} ({type(param)}) at {param.address:#x}")
+            match param:
+                case HighLevelILConstPtr(string=string):
+                    return None if string is None else string[0]
+                case HighLevelILVar(var=var):
+                    log_warn(
+                        f"Found variable `{var}` ({type(var)}) at {param.address:#x}"
+                    )
+                    return var
+                case _:
+                    log_warn(
+                        f"Unknown parameter `{param}` ({type(param)}) at {param.address:#x}"
+                    )
+        case (
+            HighLevelILVarInit()
+            | HighLevelILAssignUnpack()
+            | HighLevelILVar()
+            | HighLevelILAssign()
+            | HighLevelILRet()
+        ):
+            return None
+        case _:
+            log_warn(
+                f"Unknown instruction `{instruction}` ({type(instruction)}) at {instruction.address:#x}"
             )
-        ).hlil
-        process_hlil(reference_hlil, parameter_id)
+    return None
+
+
+def process() -> None:
+    if not current_function:
+        log_alert("Place the cursor inside the target function")
+        return
+    parameter_id = get_choice_input(
+        "Argument that contains the function name:",
+        "Arguments",
+        [f"{p.type} {p.name}" for p in current_function.parameter_vars],
+    )
+    if parameter_id is None:
+        return
+
+    names: dict[Function, set[str]] = {}
+    for ref in current_function.caller_sites:
+        try:
+            if ref.hlil is None:
+                log_warn(f"Can't find HLIL at {ref.address:#x}")
+                continue
+        except ILException:
+            log_warn(f"Can't get LLIL at {ref.address:#x}")
+            continue
+        function = ref.function
+        if function is None:
+            log_warn(f"Can't find function at {ref.address:#x}")
+            continue
+        if not function.symbol.auto:
+            log_debug(f"skip: {function.name} ({function.lowest_address:#x})")
+            continue
+        name = next(ref.hlil.traverse(find_name, parameter_id))
+        if isinstance(name, Variable):
+            continue
+        if function in names:
+            names[function].add(name)
+        else:
+            names[function] = {name}
+
+    for function in names:
+        variants = names[function]
+        if len(variants) > 1:
+            log_warn(
+                f"Multiple names for {function.name} ({function.lowest_address:#x}): {variants}"
+            )
+        else:
+            function.name = variants.pop()
 
 
 process()
