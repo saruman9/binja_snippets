@@ -21,10 +21,9 @@ from binaryninja.log import log_warn, log_alert, log_debug
 from binaryninja.exceptions import ILException
 
 if typing.TYPE_CHECKING:
-    from binaryninja import BinaryView
+    from binaryninja.binaryview import BinaryView
 
     bv: BinaryView | Any = None
-    here: int = 0
     current_function: Function | Any = None
 
 
