@@ -7,6 +7,7 @@ from binaryninja.highlevelil import (
     HighLevelILInstruction,
     HighLevelILFunction,
     HighLevelILCall,
+    HighLevelILTailcall,
     HighLevelILVar,
     HighLevelILConstPtr,
 )
@@ -95,7 +96,10 @@ def set_name(
         f"{set_name.__name__}: {instruction} ({type(instruction)}) at {instruction.address:#x}"
     )
     match instruction:
-        case HighLevelILCall(dest=dest, params=params):
+        case (
+            HighLevelILCall(dest=dest, params=params)
+            | HighLevelILTailcall(dest=dest, params=params)
+        ):
             param_id: int | None = None
             target_var: Variable | None = None
             for i, param in enumerate(params):
@@ -117,19 +121,6 @@ def set_name(
     return None
 
 
-def process_hlil(hlil_ins: HighLevelILInstruction):
-    if not current_ui_token_state:
-        log_alert("Set the cursor on the target token")
-        return
-    local_var = current_ui_token_state.localVar
-    if not local_var:
-        log_alert("Set the cursor on the variable")
-        return
-    if not next(hlil_ins.traverse(set_name, local_var)):
-        log_alert("Can't find name")
-    return
-
-
 def process():
     if not current_function:
         log_alert("Place the cursor inside a function")
@@ -143,7 +134,16 @@ def process():
     if not here_hlil:
         log_alert(f"Can't get HLIL at {here:#x}")
         return
-    process_hlil(here_hlil)
+    if not current_ui_token_state:
+        log_alert("Set the cursor on the target token")
+        return
+    local_var = current_ui_token_state.localVar
+    if not local_var:
+        log_alert("Set the cursor on the variable")
+        return
+    if not next(here_hlil.traverse(set_name, local_var)):
+        log_alert("Can't find name")
+    return
 
 
 process()
