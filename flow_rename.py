@@ -113,8 +113,8 @@ def set_name(
                     continue
                 break
             if not target_var:
-                log_alert("Can't find variable")
-                return None
+                log_error("Can't find variable")
+                return False
             target_param: Variable = next(dest.traverse(find_param, param_id))
             target_var.name = target_param.name
             return True
