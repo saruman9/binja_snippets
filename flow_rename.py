@@ -2,6 +2,7 @@
 #Shift+N
 import typing
 from typing import Any
+import re
 
 from binaryninja.highlevelil import (
     HighLevelILInstruction,
@@ -10,6 +11,7 @@ from binaryninja.highlevelil import (
     HighLevelILTailcall,
     HighLevelILVar,
     HighLevelILConstPtr,
+    HighLevelILVarInit,
 )
 from binaryninja.function import Function
 from binaryninja.interaction import show_message_box
@@ -17,6 +19,7 @@ from binaryninja.enums import MessageBoxIcon, TypeClass
 from binaryninja.log import log_error, log_alert, log_debug
 from binaryninja.exceptions import ILException
 from binaryninja.variable import CoreVariable, Variable
+from binaryninja.types import Symbol
 from binaryninjaui import HighlightTokenState, UIContext
 
 if typing.TYPE_CHECKING:
@@ -58,6 +61,36 @@ def get_field_name(var, offset):
     ty = var.type
     ty = get_struct_type(ty)
     return ty.member_at_offset(offset).name
+
+
+def camel_to_snake(s: str) -> str:
+    if s.lower() == s:
+        return s
+
+    snake_case = re.sub(r"(?<!^)(?=[A-Z])", "_", s).lower()
+    return snake_case
+
+
+def format_name(input: str) -> str:
+    if input.startswith("get"):
+        input = input.removeprefix("get")
+    if input.startswith("g_"):
+        input = input.removeprefix("g_")
+    input = camel_to_snake(input)
+    return input
+
+
+def find_name(instruction: HighLevelILInstruction) -> str | None:
+    log_debug(
+        f"{find_name.__name__}: {instruction} ({type(instruction)}) at {instruction.address:#x}"
+    )
+    match instruction:
+        case HighLevelILConstPtr(constant=address):
+            symbol: Symbol = bv.get_symbol_at(address)
+            return symbol.name
+        case HighLevelILVar(var=var):
+            return var.name
+    return None
 
 
 def find_variable(
@@ -113,10 +146,14 @@ def set_name(
                     continue
                 break
             if not target_var:
-                log_error("Can't find variable")
+                log_alert("Can't find variable")
                 return False
             target_param: Variable = next(dest.traverse(find_param, param_id))
             target_var.name = target_param.name
+            return True
+        case HighLevelILVarInit(dest=target_var, src=src_instruction):
+            name = next(src_instruction.traverse(find_name))
+            target_var.name = format_name(name)
             return True
     return None
 
@@ -141,8 +178,7 @@ def process():
     if not local_var:
         log_alert("Set the cursor on the variable")
         return
-    if not next(here_hlil.traverse(set_name, local_var)):
-        log_alert("Can't find name")
+    next(here_hlil.traverse(set_name, local_var))
     return
 
 
