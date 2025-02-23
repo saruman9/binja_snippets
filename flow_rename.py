@@ -19,7 +19,7 @@ from binaryninja.enums import MessageBoxIcon, TypeClass
 from binaryninja.log import log_error, log_alert, log_debug
 from binaryninja.exceptions import ILException
 from binaryninja.variable import CoreVariable, Variable
-from binaryninja.types import Symbol
+from binaryninja.types import CoreSymbol
 from binaryninjaui import HighlightTokenState, UIContext
 
 if typing.TYPE_CHECKING:
@@ -86,7 +86,7 @@ def find_name(instruction: HighLevelILInstruction) -> str | None:
     )
     match instruction:
         case HighLevelILConstPtr(constant=address):
-            symbol: Symbol = bv.get_symbol_at(address)
+            symbol = bv.get_symbol_at(address)
             return symbol.name
         case HighLevelILVar(var=var):
             return var.name
@@ -122,6 +122,17 @@ def find_param(instruction: HighLevelILInstruction, param_id: int) -> Variable |
     return None
 
 
+def rename_variable_without_collisions(variable: Variable, name: str, index: int = 1):
+    function_vars = variable.function.vars
+    for local_var in function_vars:
+        if local_var.name == name:
+            rename_variable_without_collisions(
+                variable, f"{name}_{index}", index + 1
+            )
+            return
+    variable.name = name
+
+
 def set_name(
     instruction: HighLevelILInstruction, core_var: CoreVariable
 ) -> bool | None:
@@ -149,11 +160,11 @@ def set_name(
                 log_alert("Can't find variable")
                 return False
             target_param: Variable = next(dest.traverse(find_param, param_id))
-            target_var.name = target_param.name
+            rename_variable_without_collisions(target_var, target_param.name)
             return True
         case HighLevelILVarInit(dest=target_var, src=src_instruction):
             name = next(src_instruction.traverse(find_name))
-            target_var.name = format_name(name)
+            rename_variable_without_collisions(target_var, format_name(name))
             return True
     return None
 
