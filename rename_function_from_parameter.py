@@ -3,22 +3,22 @@
 import typing
 from typing import Any
 
-from binaryninja.highlevelil import (
-    HighLevelILInstruction,
-    HighLevelILCall,
-    HighLevelILTailcall,
-    HighLevelILConstPtr,
-    HighLevelILVarInit,
-    HighLevelILAssignUnpack,
-    HighLevelILVar,
-    HighLevelILAssign,
-    HighLevelILRet,
-)
-from binaryninja.function import Function
-from binaryninja.interaction import get_choice_input
-from binaryninja.variable import Variable
-from binaryninja.log import log_warn, log_alert, log_debug
 from binaryninja.exceptions import ILException
+from binaryninja.function import Function
+from binaryninja.highlevelil import (
+    HighLevelILAssign,
+    HighLevelILAssignUnpack,
+    HighLevelILCall,
+    HighLevelILConstPtr,
+    HighLevelILInstruction,
+    HighLevelILRet,
+    HighLevelILTailcall,
+    HighLevelILVar,
+    HighLevelILVarInit,
+)
+from binaryninja.interaction import get_choice_input
+from binaryninja.log import log_alert, log_debug, log_warn
+from binaryninja.variable import Variable
 
 if typing.TYPE_CHECKING:
     from binaryninja.binaryview import BinaryView

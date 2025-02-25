@@ -1,32 +1,32 @@
 # Rename the (global) variable to name associated with function's parameter, variable assignation
 #Shift+N
+import re
 import typing
 from typing import Any
-import re
 
+from binaryninja.enums import MessageBoxIcon, SymbolType, TypeClass
+from binaryninja.exceptions import ILException
+from binaryninja.function import Function
 from binaryninja.highlevelil import (
-    HighLevelILInstruction,
-    HighLevelILFunction,
+    HighLevelILAssign,
     HighLevelILCall,
+    HighLevelILConstPtr,
+    HighLevelILFunction,
+    HighLevelILInstruction,
     HighLevelILTailcall,
     HighLevelILVar,
-    HighLevelILConstPtr,
     HighLevelILVarInit,
-    HighLevelILAssign,
 )
-from binaryninja.function import Function
 from binaryninja.interaction import show_message_box
-from binaryninja.enums import MessageBoxIcon, TypeClass, SymbolType
-from binaryninja.log import log_error, log_alert, log_debug
-from binaryninja.exceptions import ILException
-from binaryninja.variable import CoreVariable, Variable
+from binaryninja.log import log_alert, log_debug, log_error
 from binaryninja.types import Symbol
+from binaryninja.variable import CoreVariable, Variable
 from binaryninjaui import HighlightTokenState, UIContext  # type: ignore[import-untyped]
 
 if typing.TYPE_CHECKING:
     from binaryninja.binaryview import BinaryView
-    from binaryninja.highlevelil import HighLevelILFunction
     from binaryninja.function import Function
+    from binaryninja.highlevelil import HighLevelILFunction
 
     bv: BinaryView | Any = None
     here: int = 0
