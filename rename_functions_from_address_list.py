@@ -2,19 +2,18 @@
 #
 import typing
 
-from binaryninja.highlevelil import (
-    HighLevelILFunction,
-)
-from binaryninja import Function
-from binaryninja.interaction import TextLineField, MultilineTextField
+from binaryninja.binaryview import BinaryView
+from binaryninja.function import Function
+from binaryninja.highlevelil import HighLevelILFunction
+from binaryninja.interaction import MultilineTextField, TextLineField
 
 if typing.TYPE_CHECKING:
     import binaryninja
 
-    bv: binaryninja.BinaryView = None
+    bv: BinaryView | None = None
     here: int = 0
-    current_hlil: HighLevelILFunction = None
-    current_function: Function = None
+    current_hlil: HighLevelILFunction | None = None
+    current_function: Function | None = None
 
 
 def process():
