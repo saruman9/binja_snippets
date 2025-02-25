@@ -1,4 +1,4 @@
-# Rename the variable to name associated with function's parameter
+# Rename the (global) variable to name associated with function's parameter, variable assignation
 #Shift+N
 import typing
 from typing import Any
