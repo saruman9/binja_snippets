@@ -88,7 +88,7 @@ def find_name(instruction: HighLevelILInstruction) -> str | bool | None:
     match instruction:
         case HighLevelILConstPtr(constant=address):
             symbol = bv.get_symbol_at(address)
-            if not symbol:
+            if symbol is None:
                 log_error(f"Can't get symbol at {address:#x}")
                 return False
             return symbol.name
@@ -127,7 +127,7 @@ def find_param(instruction: HighLevelILInstruction, param_id: int) -> Variable |
     match instruction:
         case HighLevelILConstPtr(constant=address):
             function = bv.get_function_at(address)
-            if not function:
+            if function is None:
                 log_alert(f"Can't find function at {address:#x}")
                 return None
             return function.parameter_vars.vars[param_id]
@@ -166,15 +166,13 @@ def set_name(
             target_var: Variable | None = None
             for i, param in enumerate(params):
                 for var in param.traverse(find_variable, core_var):
-                    if not var:
-                        continue
                     target_var = var
                     param_id = i
                     break
                 else:
                     continue
                 break
-            if not target_var:
+            if target_var is None:
                 log_alert("Can't find variable")
                 return False
             target_param: Variable = next(dest.traverse(find_param, param_id))
@@ -197,7 +195,7 @@ def set_name(
 
 
 def process():
-    if not current_function:
+    if current_function is None:
         log_alert("Place the cursor inside a function")
         return
     try:
@@ -206,14 +204,14 @@ def process():
         log_alert(f"Can't get LLIL at {here:#x}")
         return
     here_hlil = here_llil.hlil
-    if not here_hlil:
+    if here_hlil is None:
         log_alert(f"Can't get HLIL at {here:#x}")
         return
-    if not current_ui_token_state:
+    if current_ui_token_state is None:
         log_alert("Set the cursor on the target token")
         return
     local_var = current_ui_token_state.localVar
-    if not local_var:
+    if local_var is None:
         log_alert("Set the cursor on the variable")
         return
     next(here_hlil.traverse(set_name, local_var))

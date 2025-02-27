@@ -1,4 +1,4 @@
-#Dump functions names
+# Dump functions names
 #
 import typing
 
@@ -14,7 +14,7 @@ def process():
     filename = get_save_filename_input(
         "File with functions", default_name="functions.txt"
     )
-    if not filename:
+    if filename is None:
         return
     functions = []
     with open(filename, "w") as f:

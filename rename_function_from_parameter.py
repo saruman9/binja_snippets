@@ -61,7 +61,7 @@ def find_name(instruction: HighLevelILInstruction, index: int) -> str | Variable
 
 
 def process() -> None:
-    if not current_function:
+    if current_function is None:
         log_alert("Place the cursor inside the target function")
         return
     parameter_id = get_choice_input(
