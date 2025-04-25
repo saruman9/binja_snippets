@@ -1,5 +1,5 @@
-# Rename the (global) variable to name associated with function's parameter, variable assignation
-# Shift+N
+#Rename the (global) variable to name associated with function's parameter, variable assignation
+#Shift+N
 import re
 import typing
 from typing import Any
@@ -192,6 +192,7 @@ def set_name(
                 rename_variable_without_collisions(
                     target_instruction.var, format_name(name)
                 )
+                return True
             target_address = next(target_instruction.traverse(find_global))  # type: ignore[arg-type]
             rename_global_without_collisions(target_address, f"g_{format_name(name)}")
             return True
