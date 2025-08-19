@@ -9,14 +9,10 @@ from binaryninja.interaction import (
     get_form_input,
 )
 from binaryninja.log import log_info, log_warn
-from binaryninja.types import PointerBuilder, Type
+from binaryninja.types import PointerBuilder
 
 if typing.TYPE_CHECKING:
     bv: BinaryView | None = None
-
-
-def get_pointer_base_type() -> Type | None:
-    pass
 
 
 def process():
@@ -24,7 +20,9 @@ def process():
         return
     search_type_field = TextLineField("Search type")
     replace_type_field = TextLineField("Replace type")
-    option = ChoiceField("Replace option", ["typedef -> ptr", "typedef -> struct/enum"])
+    option = ChoiceField(
+        "Replace option", ["typedef -> ptr", "typedef -> struct/enum", "ptr -> ptr"]
+    )
     if not get_form_input(
         [search_type_field, replace_type_field, option], "Change type"
     ):
@@ -34,7 +32,7 @@ def process():
     if search_type_str is None or replace_type_str is None:
         return
     match option.result:
-        case 0:
+        case 0 | 2:
             base_replace_type = bv.get_type_by_name(replace_type_str)
             if base_replace_type is None:
                 log_warn(f"can't find {replace_type_str} type")
@@ -53,6 +51,11 @@ def process():
         changed = False
         old_function = str(function)
         return_type = function.return_type
+        if option.result == 2 and return_type is not None:
+            try:
+                return_type = return_type.children[0]
+            except IndexError:
+                return_type = None
         try:
             if return_type is not None and return_type.name == search_type_str:
                 function.return_type = replace_type
@@ -62,8 +65,14 @@ def process():
         except NotImplementedError:
             pass
         for argument in function.parameter_vars:
+            argument_type = argument.type
+            if option.result == 2 and argument_type is not None:
+                try:
+                    argument_type = argument_type.children[0]
+                except IndexError:
+                    argument_type = None
             try:
-                if argument.type is not None and argument.type.name == search_type_str:
+                if argument_type is not None and argument_type.name == search_type_str:
                     argument.type = replace_type  # pyright: ignore[reportAttributeAccessIssue]
                     changed = True
             except NotImplementedError:
