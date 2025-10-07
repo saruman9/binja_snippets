@@ -1,4 +1,4 @@
-# Extract ramfs files from Cisco ASA
+# Extract ramfs files (without sal_fwrite) from Cisco ASA
 #
 from pathlib import Path
 import typing
