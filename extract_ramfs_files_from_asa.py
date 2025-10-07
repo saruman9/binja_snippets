@@ -48,8 +48,10 @@ def get_data_address(instr: HighLevelILInstruction) -> int | None:
     match instr:
         case HighLevelILConstPtr(constant=constant):
             return constant
+        case HighLevelILConst(constant=constant):
+            return constant
         case _:
-            log_debug(f"found not ConstPtr at {instr.address:08x}")
+            log_debug(f"found not ConstPtr or Const at {instr.address:08x}")
 
 
 def get_data(instr: HighLevelILInstruction, size: int) -> bytes | None:
