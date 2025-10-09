@@ -7,7 +7,7 @@ from binaryninja.interaction import get_save_filename_input
 from binaryninja.log import log_info, log_warn
 
 if typing.TYPE_CHECKING:
-    bv: BinaryView | None = None
+    bv: BinaryView = None  # pyright: ignore[reportAssignmentType]
 
 
 def process():
@@ -16,18 +16,16 @@ def process():
     )
     if filename is None:
         return
-    functions = []
+    functions: list[str] = []
     with open(filename, "w") as f:
         for function in bv.functions:
             if not function.symbol.auto:
-                f.write(hex(function.start))
-                f.write(" ")
-                f.write(function.name)
-                f.write("\n")
                 if function.name in functions:
-                    log_warn(f"Duplicate: {function.name} ({function.start:#x})")
+                    log_warn(f"Duplicate: {function.name} ({function.start:08x})")
+                    continue
+                f.write(f"{function.start:08x} : {function.name}\n")
                 functions.append(function.name)
-    log_info(f"Dumped {len(functions):08} function(s) to {filename}")
+    log_info(f"Dumped {len(functions)} function(s) to {filename}")
 
 
 process()
